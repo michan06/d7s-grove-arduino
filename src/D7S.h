@@ -6,6 +6,8 @@
 // D7S address on the I2C bus.
 #define D7S_ADDRESS 0x55
 
+const int delayWait = 100;
+
 //d7s state
 typedef enum d7s_status
 {
@@ -58,10 +60,10 @@ class D7SClass
    //change the axis selection mode
    void setAxis(d7s_axis_settings axisMode);
 
-   //get instantaneus SI (during an earthquake) [m/s]
+   //get instantaneus SI (during an earthquake) [cm/s]
    float getInstantaneusSI();
-   //get instantaneus PGA (during an earthquake) [m/s^2]
-   float getInstantaneusPGA();
+   //get instantaneus PGA (during an earthquake) [cm/s^2]
+   uint16_t getInstantaneusPGA();
 
    //initialize the d7s (start the initial installation mode)
    void initialize();
