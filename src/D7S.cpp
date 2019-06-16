@@ -40,23 +40,30 @@ void D7SClass::setAxis(d7s_axis_settings axisMode)
    write8bit(0x10, 0x04, reg);
 }
 
-//get instantaneus SI (during an earthquake) [m/s]
+//get instantaneus SI (during an earthquake) [cm/s]
 float D7SClass::getInstantaneusSI()
 {
-   return ((float)read16bit(0x20, 0x00)) / 1000;
+   // ref No. 9915800-4B http://akizukidenshi.com/download/ds/omron/D7S-A0001_a.pdf
+   // P17 main_si 0x0000～0xFFFF (0.0～6553.5)*小数点以下第1位固定 SI値 kine
+   return ((float)read16bit(0x20, 0x00)/10.0);
 }
 
-//get instantaneus PGA (during an earthquake) [m/s^2]
-float D7SClass::getInstantaneusPGA()
+//get instantaneus PGA (during an earthquake) [cm/s^2]
+uint16_t D7SClass::getInstantaneusPGA()
 {
-   return ((float)read16bit(0x20, 0x02)) / 1000;
+   // ref No. 9915800-4B http://akizukidenshi.com/download/ds/omron/D7S-A0001_a.pdf
+   // P17 main_pga PGA(2軸合成最大加速度) 0x0000～0xFFFF (0～65535)*整数固定 gal
+   return ((uint16_t)read16bit(0x20, 0x02));
 }
 
 //initialize the d7s (start the initial installation mode)
 void D7SClass::initialize()
 {
+   Serial.printf("current mode:%d\n",read8bit(0x10, 0x03));
    //write INITIAL INSTALLATION MODE command
    write8bit(0x10, 0x03, 0x02);
+   // return(read8bit(0x10, 0x03));
+   Serial.printf("current mode:%d\n",read8bit(0x10, 0x03));
 }
 
 //after each earthquakes it's important to reset the events calling resetEvents() to prevent polluting the new data with the old one
@@ -96,20 +103,23 @@ uint8_t D7SClass::isEarthquakeOccuring()
 
 uint8_t D7SClass::isReady()
 {
+   // delay(delayWait);
    return getState() == NORMAL_MODE;
 }
 
 //read 8 bit from the specified register
 uint8_t D7SClass::read8bit(uint8_t regH, uint8_t regL)
 {
+   // delay(delayWait);
    //setting up i2c connection
    WireD7S.beginTransmission(D7S_ADDRESS);
 
+   // delay(delayWait);
    //write register address
    WireD7S.write(regH);
-   delay(10);
+   delay(delayWait);
    WireD7S.write(regL);
-   delay(10);
+   delay(delayWait);
 
    //send RE-START message
    uint8_t status = WireD7S.endTransmission(false);
@@ -121,6 +131,7 @@ uint8_t D7SClass::read8bit(uint8_t regH, uint8_t regL)
       return read8bit(regH, regL);
    }
 
+   // delay(delayWait);
    //request 1 byte
    WireD7S.requestFrom(D7S_ADDRESS, 1);
    //wait until the data is received
@@ -137,18 +148,21 @@ uint8_t D7SClass::read8bit(uint8_t regH, uint8_t regL)
 uint16_t D7SClass::read16bit(uint8_t regH, uint8_t regL)
 {
 
+   delay(delayWait);
    //setting up i2c connection
    WireD7S.beginTransmission(D7S_ADDRESS);
 
+   delay(delayWait);
    //write register address
    WireD7S.write(regH);
-   delay(10);
+   delay(delayWait);
    WireD7S.write(regL);
-   delay(10);
+   delay(delayWait);
 
    //send RE-START message
    uint8_t status = WireD7S.endTransmission(false);
 
+   delay(delayWait);
    //if the status != 0 there is an error
    if (status != 0)
    {
@@ -156,13 +170,16 @@ uint16_t D7SClass::read16bit(uint8_t regH, uint8_t regL)
       return read16bit(regH, regL);
    }
 
+   delay(delayWait);
    //request 2 byte
    WireD7S.requestFrom(D7S_ADDRESS, 2);
    //wait until the data is received
    while (WireD7S.available() < 2)
       ;
 
+   delay(delayWait);
    uint8_t msb = WireD7S.read();
+   delay(delayWait);
    uint8_t lsb = WireD7S.read();
 
    //return the data
@@ -173,18 +190,20 @@ uint16_t D7SClass::read16bit(uint8_t regH, uint8_t regL)
 void D7SClass::write8bit(uint8_t regH, uint8_t regL, uint8_t val)
 {
 
+   delay(delayWait);
    //setting up i2c connection
    WireD7S.beginTransmission(D7S_ADDRESS);
 
+   delay(delayWait);
    //write register address
    WireD7S.write(regH);
-   delay(10);
+   delay(delayWait);
    WireD7S.write(regL);
-   delay(10);
+   delay(delayWait);
 
    //write data
    WireD7S.write(val);
-   delay(10); //delay to prevent freezing
+   delay(delayWait); //delay to prevent freezing
    //closing the connection (STOP message)
    uint8_t status = WireD7S.endTransmission(true);
 }
@@ -192,10 +211,12 @@ void D7SClass::write8bit(uint8_t regH, uint8_t regL, uint8_t val)
 //read the event (SHUTOFF/COLLAPSE) from the EVENT register
 void D7SClass::readEvents()
 {
+   delay(delayWait);
    //read the EVENT register at 0x1002 and obtaining only the first two bits
    uint8_t events = read8bit(0x10, 0x02) & 0x03;
    //updating the _events variable
    _events |= events;
+   delay(delayWait);
 }
 
 //extern object
